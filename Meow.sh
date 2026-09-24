@@ -67,24 +67,26 @@ else
 fi
 
 # Existing Cloud SQL instance ko destination profile ke roop me register karo.
-if [[ "$DEST_PROMOTED" == "1" ]] && gcloud database-migration connection-profiles describe "$DEST_PROFILE" \
+# Job create fail hone ke baad profile me stale replica metadata reh sakta hai,
+# isliye jab tak migration job exist nahi karta, profile ko fresh banate hain.
+JOB_EXISTS=0
+if gcloud database-migration migration-jobs describe "$MIGRATION_JOB" \
   --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
-  echo "Promoted destination ke liye old destination profile refresh kar rahe hain..."
-  gcloud database-migration connection-profiles delete "$DEST_PROFILE" \
-    --region="$REGION" --project="$PROJECT_ID" --quiet
-fi
-if ! gcloud database-migration connection-profiles describe "$DEST_PROFILE" \
-  --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  JOB_EXISTS=1
+else
+  if gcloud database-migration connection-profiles describe "$DEST_PROFILE" \
+    --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+    echo "Destination profile refresh kar rahe hain..."
+    gcloud database-migration connection-profiles delete "$DEST_PROFILE" \
+      --region="$REGION" --project="$PROJECT_ID" --quiet
+  fi
   gcloud database-migration connection-profiles create postgresql "$DEST_PROFILE" \
     --project="$PROJECT_ID" --region="$REGION" --role=DESTINATION \
     --cloudsql-instance="$DEST_INSTANCE" --no-async
-else
-  echo "Destination connection profile already exists: $DEST_PROFILE"
 fi
 
 # Continuous migration job using VPC peering with the default VPC.
-if ! gcloud database-migration migration-jobs describe "$MIGRATION_JOB" \
-  --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+if [[ "$JOB_EXISTS" == "0" ]]; then
   gcloud database-migration migration-jobs create "$MIGRATION_JOB" \
     --project="$PROJECT_ID" --region="$REGION" --type=CONTINUOUS \
     --source="$SOURCE_PROFILE" --destination="$DEST_PROFILE" \
