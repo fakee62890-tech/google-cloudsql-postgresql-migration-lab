@@ -5,7 +5,7 @@ Ye Google Cloud lab ke liye Cloud Shell automation hai. Script source VM `postgr
 ## Cloud Shell me ye 3 commands one-by-one chalao
 
 ```bash
-curl -LO https://raw.githubusercontent.com/manavyugaitech/Welcome/main/Migrate%20a%20stand-alone%20PostgreSQL%20database%20to%20Cloud%20SQL%20for%20PostgreSQL/Meow.sh
+curl -LO https://raw.githubusercontent.com/fakee62890-tech/google-cloudsql-postgresql-migration-lab/master/Meow.sh
 ```
 
 ```bash
