@@ -35,7 +35,7 @@ SOURCE_IP="$(gcloud compute instances describe "$SOURCE_VM" \
 DEST_INSTANCE_TYPE="$(gcloud sql instances describe "$DEST_INSTANCE" \
   --project="$PROJECT_ID" --format='value(instanceType)' 2>/dev/null || true)"
 DEST_PROMOTED=0
-if [[ "$DEST_INSTANCE_TYPE" == "READ_REPLICA" ]]; then
+if [[ "$DEST_INSTANCE_TYPE" == "READ_REPLICA" || "$DEST_INSTANCE_TYPE" == "READ_REPLICA_INSTANCE" ]]; then
   echo "Destination $DEST_INSTANCE read replica hai; standalone me promote kar rahe hain..."
   gcloud sql instances promote-replica "$DEST_INSTANCE" \
     --project="$PROJECT_ID" --quiet
@@ -43,6 +43,7 @@ if [[ "$DEST_INSTANCE_TYPE" == "READ_REPLICA" ]]; then
   DEST_PROMOTED=1
 fi
 if [[ -n "$DEST_INSTANCE_TYPE" && "$DEST_INSTANCE_TYPE" != "READ_REPLICA" && \
+      "$DEST_INSTANCE_TYPE" != "READ_REPLICA_INSTANCE" && \
       "$DEST_INSTANCE_TYPE" != "CLOUD_SQL_INSTANCE" ]]; then
   echo "ERROR: $DEST_INSTANCE ka instance type '$DEST_INSTANCE_TYPE' hai; DMS ko standalone Cloud SQL instance chahiye." >&2
   exit 1
