@@ -29,6 +29,25 @@ SOURCE_IP="$(gcloud compute instances describe "$SOURCE_VM" \
   --format='value(networkInterfaces[0].networkIP)')"
 [[ -n "$SOURCE_IP" ]] || { echo "ERROR: Source VM ka internal IP nahi mila." >&2; exit 1; }
 
+# DMS ko destination ke liye standalone Cloud SQL instance chahiye.
+# Agar previous failed attempt ne instance ko read replica bana diya ho,
+# to temporary lab environment me usse standalone promote kar do.
+DEST_INSTANCE_TYPE="$(gcloud sql instances describe "$DEST_INSTANCE" \
+  --project="$PROJECT_ID" --format='value(instanceType)' 2>/dev/null || true)"
+DEST_PROMOTED=0
+if [[ "$DEST_INSTANCE_TYPE" == "READ_REPLICA" ]]; then
+  echo "Destination $DEST_INSTANCE read replica hai; standalone me promote kar rahe hain..."
+  gcloud sql instances promote-replica "$DEST_INSTANCE" \
+    --project="$PROJECT_ID" --quiet
+  echo "Destination promotion complete."
+  DEST_PROMOTED=1
+fi
+if [[ -n "$DEST_INSTANCE_TYPE" && "$DEST_INSTANCE_TYPE" != "READ_REPLICA" && \
+      "$DEST_INSTANCE_TYPE" != "CLOUD_SQL_INSTANCE" ]]; then
+  echo "ERROR: $DEST_INSTANCE ka instance type '$DEST_INSTANCE_TYPE' hai; DMS ko standalone Cloud SQL instance chahiye." >&2
+  exit 1
+fi
+
 printf 'Project: %s\nSource: %s (%s, zone %s)\nDestination: %s\n' \
   "$PROJECT_ID" "$SOURCE_VM" "$SOURCE_IP" "$SOURCE_ZONE" "$DEST_INSTANCE"
 
@@ -48,6 +67,12 @@ else
 fi
 
 # Existing Cloud SQL instance ko destination profile ke roop me register karo.
+if [[ "$DEST_PROMOTED" == "1" ]] && gcloud database-migration connection-profiles describe "$DEST_PROFILE" \
+  --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  echo "Promoted destination ke liye old destination profile refresh kar rahe hain..."
+  gcloud database-migration connection-profiles delete "$DEST_PROFILE" \
+    --region="$REGION" --project="$PROJECT_ID" --quiet
+fi
 if ! gcloud database-migration connection-profiles describe "$DEST_PROFILE" \
   --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
   gcloud database-migration connection-profiles create postgresql "$DEST_PROFILE" \

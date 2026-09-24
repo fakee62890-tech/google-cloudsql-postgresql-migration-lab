@@ -24,5 +24,6 @@ Script ko aam taur par **5–10 minutes** lag sakte hain. DMS destination privat
 
 - Script sirf temporary Skills Boost lab project me chalao.
 - Source VM pehle se prepare honi chahiye: `pglogical`, logical replication settings, aur `import_admin` user/permissions lab ke previous task ke mutabik configured hon.
+- Agar `Instance must be standalone, not replicas` error aaye, updated script destination ko detect karke read replica se standalone promote karega, old destination profile refresh karega, aur phir migration job create karega. Same 3 commands dobara run kar do.
 - Agar job verify karte waqt source PostgreSQL ke `pg_hba.conf` me DMS ke allocated peering CIDR ki zaroorat bataye, to lab ke VPC Peering effective route me dikhne wala CIDR `pg_hba.conf` me add karke PostgreSQL reload/restart karo, phir script dobara chalao.
 - Temporary lab password script me included hai; lab khatam hone ke baad ye credentials expire ho jayenge.
